@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Google Sans', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f8f9fa;
+      color: #202124;
+    }
+
+    h2 {
+      margin: 0 0 20px 0;
+      color: #1a73e8;
+      font-size: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #5f6368;
+      margin-bottom: 6px;
+    }
+
+    .required::after {
+      content: ' *';
+      color: #d93025;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #202124;
+      background: white;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkbox-group input {
+      width: auto;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #dadce0;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1557b0;
+    }
+
+    .btn-primary:disabled {
+      background: #dadce0;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #5f6368;
+      border: 1px solid #dadce0;
+    }
+
+    .btn-secondary:hover {
+      background: #f1f3f4;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .message.success {
+      background: #e6f4ea;
+      color: #1e8e3e;
+      border: 1px solid #ceead6;
+    }
+
+    .message.error {
+      background: #fce8e6;
+      color: #d93025;
+      border: 1px solid #f5c6cb;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: #5f6368;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 20px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #dadce0;
+    }
+  </style>
+</head>
+<body>
+  <h2>Add New Contract</h2>
+
+  <div id="message" class="message" style="display: none;"></div>
+
+  <form id="contractForm" onsubmit="submitForm(event)">
+    <div class="section-title">Contract Details</div>
+
+    <div class="form-group">
+      <label class="required">Contract Name</label>
+      <input type="text" id="name" required placeholder="e.g., Annual Software License">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="required">Vendor / Party</label>
+        <input type="text" id="vendor" required placeholder="e.g., Microsoft">
+      </div>
+      <div class="form-group">
+        <label class="required">Contract Type</label>
+        <select id="type" required>
+          <option value="">Select type...</option>
+          <option value="Service">Service Agreement</option>
+          <option value="Subscription">Subscription</option>
+          <option value="License">Software License</option>
+          <option value="Lease">Lease</option>
+          <option value="Employment">Employment</option>
+          <option value="NDA">NDA</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Status</label>
+        <select id="status">
+          <option value="Active">Active</option>
+          <option value="Pending">Pending</option>
+          <option value="Draft">Draft</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="department" placeholder="e.g., IT, Legal, Operations">
+      </div>
+    </div>
+
+    <div class="section-title">Dates & Terms</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="required">Start Date</label>
+        <input type="date" id="startDate" required>
+      </div>
+      <div class="form-group">
+        <label class="required">End Date</label>
+        <input type="date" id="endDate" required>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Renewal Date</label>
+        <input type="date" id="renewalDate">
+        <small style="color: #5f6368; font-size: 11px;">Leave blank to use end date</small>
+      </div>
+      <div class="form-group">
+        <label>Notice Period (days)</label>
+        <input type="number" id="noticePeriod" value="30" min="0">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="checkbox-group">
+        <input type="checkbox" id="autoRenew">
+        <label for="autoRenew" style="margin: 0;">Auto-Renew Enabled</label>
+      </div>
+    </div>
+
+    <div class="section-title">Value & Documentation</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Contract Value</label>
+        <input type="number" id="value" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Currency</label>
+        <select id="currency">
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="GBP">GBP</option>
+          <option value="CAD">CAD</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Document Link (Google Drive URL)</label>
+      <input type="url" id="docLink" placeholder="https://drive.google.com/...">
+    </div>
+
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="notes" placeholder="Additional notes about this contract..."></textarea>
+    </div>
+
+    <div class="btn-group">
+      <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Cancel</button>
+      <button type="submit" class="btn btn-primary" id="submitBtn">Add Contract</button>
+    </div>
+  </form>
+
+  <script>
+    // Set default dates
+    document.addEventListener('DOMContentLoaded', function() {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('startDate').value = today;
+
+      // Set end date to 1 year from now
+      const nextYear = new Date();
+      nextYear.setFullYear(nextYear.getFullYear() + 1);
+      document.getElementById('endDate').value = nextYear.toISOString().split('T')[0];
+    });
+
+    function submitForm(e) {
+      e.preventDefault();
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Adding...';
+
+      const contractData = {
+        name: document.getElementById('name').value,
+        vendor: document.getElementById('vendor').value,
+        type: document.getElementById('type').value,
+        status: document.getElementById('status').value,
+        department: document.getElementById('department').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        renewalDate: document.getElementById('renewalDate').value || document.getElementById('endDate').value,
+        noticePeriod: parseInt(document.getElementById('noticePeriod').value) || 30,
+        autoRenew: document.getElementById('autoRenew').checked,
+        value: parseFloat(document.getElementById('value').value) || 0,
+        currency: document.getElementById('currency').value,
+        docLink: document.getElementById('docLink').value,
+        notes: document.getElementById('notes').value
+      };
+
+      google.script.run
+        .withSuccessHandler(handleSuccess)
+        .withFailureHandler(handleError)
+        .addContract(contractData);
+    }
+
+    function handleSuccess(result) {
+      const btn = document.getElementById('submitBtn');
+      const msg = document.getElementById('message');
+
+      if (result.success) {
+        msg.className = 'message success';
+        msg.textContent = result.message + ' (ID: ' + result.contractId + ')';
+        msg.style.display = 'block';
+
+        // Reset form
+        document.getElementById('contractForm').reset();
+        btn.textContent = 'Add Another';
+        btn.disabled = false;
+
+        // Close after 2 seconds
+        setTimeout(function() {
+          google.script.host.close();
+        }, 2000);
+      } else {
+        msg.className = 'message error';
+        msg.textContent = result.message;
+        msg.style.display = 'block';
+        btn.textContent = 'Add Contract';
+        btn.disabled = false;
+      }
+    }
+
+    function handleError(error) {
+      const btn = document.getElementById('submitBtn');
+      const msg = document.getElementById('message');
+
+      msg.className = 'message error';
+      msg.textContent = 'Error: ' + error.message;
+      msg.style.display = 'block';
+
+      btn.textContent = 'Add Contract';
+      btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

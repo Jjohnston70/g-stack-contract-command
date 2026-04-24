@@ -1,0 +1,21 @@
+{
+    "date": "January 2026",
+    "theme": {
+        "primary_gradient": "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
+        "accent_color": "#ffd700",
+        "secondary_color": "#87ceeb"
+    },
+    "company": {
+        "name": "True North Data Strategies LLC",
+        "tagline": "Turning Data into Direction."
+    },
+    "branding": {
+        "show_logo": false,
+        "logo_url": ""
+    },
+    "slides": {
+        "max_items_per_slide": 6,
+        "max_features": 9,
+        "show_contact": true
+    }
+}

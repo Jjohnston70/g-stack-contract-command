@@ -1,0 +1,39 @@
+# Environment and secrets
+.env
+.env.*
+*.env
+credentials*
+*.pem
+*.key
+.clasp.json
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build/runtime artifacts
+dist/
+build/
+coverage/
+*.log
+desktop.ini
+SANITIZE-LOG.md

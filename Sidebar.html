@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Google Sans', Arial, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f8f9fa;
+      color: #202124;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #dadce0;
+    }
+
+    .header h2 {
+      margin: 0 0 4px 0;
+      font-size: 18px;
+      font-weight: 500;
+      color: #1a73e8;
+    }
+
+    .header p {
+      margin: 0;
+      font-size: 12px;
+      color: #5f6368;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 500;
+      color: #1a73e8;
+    }
+
+    .stat-value.warning { color: #f9ab00; }
+    .stat-value.danger { color: #d93025; }
+
+    .stat-label {
+      font-size: 11px;
+      color: #5f6368;
+      margin-top: 4px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: #5f6368;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .expiring-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .expiring-item {
+      background: white;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
+    .expiring-item.urgent {
+      border-left: 3px solid #d93025;
+    }
+
+    .expiring-item.warning {
+      border-left: 3px solid #f9ab00;
+    }
+
+    .expiring-name {
+      font-weight: 500;
+      font-size: 13px;
+      color: #202124;
+    }
+
+    .expiring-vendor {
+      font-size: 11px;
+      color: #5f6368;
+    }
+
+    .expiring-days {
+      font-size: 11px;
+      font-weight: 500;
+      color: #d93025;
+      margin-top: 4px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1557b0;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #1a73e8;
+      border: 1px solid #dadce0;
+    }
+
+    .btn-secondary:hover {
+      background: #f1f3f4;
+    }
+
+    .footer {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #dadce0;
+      text-align: center;
+      font-size: 11px;
+      color: #5f6368;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #5f6368;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      color: #5f6368;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2 id="title">Contract Tracker</h2>
+    <p id="subtitle">Manage contracts & renewals</p>
+  </div>
+
+  <div id="content">
+    <div class="loading">Loading...</div>
+  </div>
+
+  <div class="footer">
+    <p>True North Data Strategies</p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      loadSidebarData();
+    });
+
+    function loadSidebarData() {
+      google.script.run
+        .withSuccessHandler(renderSidebar)
+        .withFailureHandler(showError)
+        .getSidebarData();
+    }
+
+    function renderSidebar(data) {
+      if (data.menuTitle) {
+        document.getElementById('title').textContent = data.menuTitle;
+      }
+
+      let html = '';
+
+      // Stats Grid
+      html += '<div class="stats-grid">';
+      html += '<div class="stat-card"><div class="stat-value">' + (data.stats.total || 0) + '</div><div class="stat-label">Total</div></div>';
+      html += '<div class="stat-card"><div class="stat-value">' + (data.stats.active || 0) + '</div><div class="stat-label">Active</div></div>';
+      html += '<div class="stat-card"><div class="stat-value ' + (data.stats.expiringSoon > 0 ? 'warning' : '') + '">' + (data.stats.expiringSoon || 0) + '</div><div class="stat-label">Expiring Soon</div></div>';
+      html += '<div class="stat-card"><div class="stat-value ' + (data.stats.expired > 0 ? 'danger' : '') + '">' + (data.stats.expired || 0) + '</div><div class="stat-label">Expired</div></div>';
+      html += '</div>';
+
+      // Quick Actions
+      html += '<div class="section">';
+      html += '<div class="section-title">Quick Actions</div>';
+      html += '<button class="btn btn-primary" onclick="addContract()">+ Add Contract</button>';
+      html += '<button class="btn btn-secondary" onclick="openDashboard()">Open Dashboard</button>';
+      html += '<button class="btn btn-secondary" onclick="checkExpirations()">Check Expirations</button>';
+      html += '</div>';
+
+      // Expiring Contracts
+      html += '<div class="section">';
+      html += '<div class="section-title">Expiring Soon (30 days)</div>';
+      html += '<div class="expiring-list">';
+
+      if (data.expiringContracts && data.expiringContracts.length > 0) {
+        data.expiringContracts.slice(0, 5).forEach(function(contract) {
+          var urgencyClass = contract.daysUntil <= 7 ? 'urgent' : 'warning';
+          html += '<div class="expiring-item ' + urgencyClass + '">';
+          html += '<div class="expiring-name">' + contract.name + '</div>';
+          html += '<div class="expiring-vendor">' + contract.vendor + '</div>';
+          html += '<div class="expiring-days">' + contract.daysUntil + ' days remaining</div>';
+          html += '</div>';
+        });
+
+        if (data.expiringContracts.length > 5) {
+          html += '<div class="empty-state">+ ' + (data.expiringContracts.length - 5) + ' more</div>';
+        }
+      } else {
+        html += '<div class="empty-state">No contracts expiring soon</div>';
+      }
+
+      html += '</div></div>';
+
+      document.getElementById('content').innerHTML = html;
+    }
+
+    function addContract() {
+      google.script.run.showAddContractDialog();
+    }
+
+    function openDashboard() {
+      google.script.run.showDashboard();
+    }
+
+    function checkExpirations() {
+      google.script.run.checkExpirations();
+    }
+
+    function showError(error) {
+      document.getElementById('content').innerHTML = '<div class="empty-state">Error loading data: ' + error.message + '</div>';
+    }
+  </script>
+</body>
+</html>

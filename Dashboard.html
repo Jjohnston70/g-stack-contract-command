@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .loading { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .status-ok { color: #34a853; }
+    .status-warning { color: #f9ab00; }
+    .status-error { color: #d93025; }
+  </style>
+</head>
+<body class="bg-gray-50 p-6">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Contract Tracker Dashboard</h1>
+        <p class="text-gray-600" id="companyName">Loading...</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-sm text-gray-500" id="lastUpdated"></span>
+        <button onclick="refreshDashboard()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div class="text-3xl font-bold text-blue-600" id="totalContracts">-</div>
+        <div class="text-sm text-gray-600">Total Contracts</div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div class="text-3xl font-bold text-green-600" id="activeContracts">-</div>
+        <div class="text-sm text-gray-600">Active</div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div class="text-3xl font-bold text-yellow-600" id="expiringSoon">-</div>
+        <div class="text-sm text-gray-600">Expiring (30d)</div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div class="text-3xl font-bold text-red-600" id="expiredContracts">-</div>
+        <div class="text-sm text-gray-600">Expired</div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div class="text-3xl font-bold text-indigo-600" id="totalValue">-</div>
+        <div class="text-sm text-gray-600">Total Value</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <!-- Status Distribution -->
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <h3 class="font-semibold text-gray-800 mb-4">By Status</h3>
+        <div class="h-48">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Contract Types -->
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <h3 class="font-semibold text-gray-800 mb-4">By Type</h3>
+        <div class="h-48">
+          <canvas id="typeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Expiration Timeline -->
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <h3 class="font-semibold text-gray-800 mb-4">Expiration Timeline (6 months)</h3>
+        <div class="h-48">
+          <canvas id="timelineChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tables Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <!-- Expiring Soon -->
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <h3 class="font-semibold text-gray-800 mb-4">Expiring Soon</h3>
+        <div class="overflow-x-auto max-h-64 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 sticky top-0">
+              <tr>
+                <th class="text-left p-2">Contract</th>
+                <th class="text-left p-2">Vendor</th>
+                <th class="text-left p-2">Days</th>
+                <th class="text-left p-2">Action</th>
+              </tr>
+            </thead>
+            <tbody id="expiringTable">
+              <tr><td colspan="4" class="p-4 text-center text-gray-500">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Contracts -->
+      <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <h3 class="font-semibold text-gray-800 mb-4">Recent Contracts</h3>
+        <div class="overflow-x-auto max-h-64 overflow-y-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 sticky top-0">
+              <tr>
+                <th class="text-left p-2">Contract</th>
+                <th class="text-left p-2">Status</th>
+                <th class="text-left p-2">Value</th>
+                <th class="text-left p-2">End Date</th>
+              </tr>
+            </thead>
+            <tbody id="recentTable">
+              <tr><td colspan="4" class="p-4 text-center text-gray-500">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Health -->
+    <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+      <h3 class="font-semibold text-gray-800 mb-4">System Health</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="healthStatus">
+        <div class="flex items-center gap-2">
+          <span class="loading">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SPREADSHEET_ID = '<?= spreadsheetId ?>';
+    let statusChart, typeChart, timelineChart;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadDashboardData();
+    });
+
+    function loadDashboardData() {
+      google.script.run
+        .withSuccessHandler(renderDashboard)
+        .withFailureHandler(showError)
+        .getDashboardData(SPREADSHEET_ID);
+    }
+
+    function refreshDashboard() {
+      document.getElementById('lastUpdated').textContent = 'Refreshing...';
+      loadDashboardData();
+    }
+
+    function renderDashboard(data) {
+      // Header
+      document.getElementById('companyName').textContent = data.companyName || 'Contract Tracker';
+      document.getElementById('lastUpdated').textContent = 'Updated: ' + data.lastUpdated;
+
+      // KPIs
+      document.getElementById('totalContracts').textContent = data.stats.total || 0;
+      document.getElementById('activeContracts').textContent = data.stats.active || 0;
+      document.getElementById('expiringSoon').textContent = data.stats.expiringSoon || 0;
+      document.getElementById('expiredContracts').textContent = data.stats.expired || 0;
+      document.getElementById('totalValue').textContent = '$' + (data.stats.totalValue || 0).toLocaleString();
+
+      // Charts
+      renderStatusChart(data.charts);
+      renderTypeChart(data.charts);
+      renderTimelineChart(data.charts);
+
+      // Tables
+      renderExpiringTable(data.expiringContracts);
+      renderRecentTable(data.recentContracts);
+
+      // Health
+      renderHealthStatus(data.health);
+    }
+
+    function renderStatusChart(charts) {
+      const ctx = document.getElementById('statusChart').getContext('2d');
+
+      if (statusChart) statusChart.destroy();
+
+      const colors = {
+        'Active': '#34a853',
+        'Expired': '#d93025',
+        'Pending': '#f9ab00',
+        'Draft': '#9aa0a6',
+        'Terminated': '#ea4335',
+        'Unknown': '#5f6368'
+      };
+
+      statusChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: charts.statusLabels || [],
+          datasets: [{
+            data: charts.statusCounts || [],
+            backgroundColor: (charts.statusLabels || []).map(l => colors[l] || '#5f6368')
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
+        }
+      });
+    }
+
+    function renderTypeChart(charts) {
+      const ctx = document.getElementById('typeChart').getContext('2d');
+
+      if (typeChart) typeChart.destroy();
+
+      const colors = ['#4285f4', '#34a853', '#fbbc05', '#ea4335', '#9c27b0', '#00bcd4', '#ff5722'];
+
+      typeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: charts.typeLabels || [],
+          datasets: [{
+            data: charts.typeCounts || [],
+            backgroundColor: colors.slice(0, (charts.typeLabels || []).length)
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
+        }
+      });
+    }
+
+    function renderTimelineChart(charts) {
+      const ctx = document.getElementById('timelineChart').getContext('2d');
+
+      if (timelineChart) timelineChart.destroy();
+
+      const timeline = charts.expirationTimeline || [];
+
+      timelineChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: timeline.map(t => t.month),
+          datasets: [{
+            label: 'Contracts Expiring',
+            data: timeline.map(t => t.count),
+            backgroundColor: timeline.map(t => t.count > 3 ? '#f9ab00' : '#4285f4')
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    function renderExpiringTable(contracts) {
+      const tbody = document.getElementById('expiringTable');
+
+      if (!contracts || contracts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No contracts expiring soon</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = contracts.slice(0, 10).map(c => {
+        const urgency = c.daysUntil <= 7 ? 'text-red-600 font-bold' : (c.daysUntil <= 14 ? 'text-yellow-600' : '');
+        return `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="p-2">${c.name}</td>
+            <td class="p-2 text-gray-600">${c.vendor}</td>
+            <td class="p-2 ${urgency}">${c.daysUntil}d</td>
+            <td class="p-2">
+              <button onclick="updateStatus('${c.id}', 'Renewed')" class="text-blue-600 hover:underline text-xs">Renew</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderRecentTable(contracts) {
+      const tbody = document.getElementById('recentTable');
+
+      if (!contracts || contracts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No contracts found</td></tr>';
+        return;
+      }
+
+      const statusColors = {
+        'Active': 'bg-green-100 text-green-800',
+        'Expired': 'bg-red-100 text-red-800',
+        'Pending': 'bg-yellow-100 text-yellow-800',
+        'Draft': 'bg-gray-100 text-gray-800'
+      };
+
+      tbody.innerHTML = contracts.slice(0, 10).map(c => {
+        const statusClass = statusColors[c.status] || 'bg-gray-100 text-gray-800';
+        const value = c.value ? '$' + parseFloat(c.value).toLocaleString() : '-';
+        return `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="p-2">${c.name}</td>
+            <td class="p-2"><span class="px-2 py-1 rounded-full text-xs ${statusClass}">${c.status}</span></td>
+            <td class="p-2">${value}</td>
+            <td class="p-2 text-gray-600">${c.endDate || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderHealthStatus(health) {
+      const container = document.getElementById('healthStatus');
+
+      const items = [
+        { key: 'sheets', label: 'Sheets' },
+        { key: 'triggers', label: 'Triggers' },
+        { key: 'settings', label: 'Settings' }
+      ];
+
+      container.innerHTML = items.map(item => {
+        const status = health[item.key] || { status: 'ok', message: 'OK' };
+        const icon = status.status === 'ok' ? '&#x2714;' : (status.status === 'warning' ? '&#x26A0;' : '&#x2718;');
+        const colorClass = 'status-' + status.status;
+        return `
+          <div class="flex items-center gap-2">
+            <span class="${colorClass}">${icon}</span>
+            <span class="font-medium">${item.label}:</span>
+            <span class="text-gray-600">${status.message}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateStatus(contractId, newStatus) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            refreshDashboard();
+          } else {
+            alert(result.message);
+          }
+        })
+        .withFailureHandler(showError)
+        .executeDashboardAction('updateStatus', { contractId: contractId, status: newStatus }, SPREADSHEET_ID);
+    }
+
+    function showError(error) {
+      console.error(error);
+      document.getElementById('lastUpdated').textContent = 'Error loading data';
+    }
+  </script>
+</body>
+</html>
